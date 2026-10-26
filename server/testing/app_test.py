@@ -68,3 +68,11 @@ class TestApp:
 
             assert(logged_out_response.status_code == 401)
             assert(logged_out_json == {})
+
+    def test_rejects_unknown_username(self):
+        '''does not create a session for an unknown username.'''
+        with app.test_client() as client:
+            response = client.post('/login', json={'username': 'not-a-seeded-user'})
+
+            assert response.status_code == 401
+            assert client.get('/check_session').status_code == 401

@@ -1,5 +1,24 @@
 # Lab: Authenticating Users
 
+This small blog demonstrates cookie-backed sessions with a Flask API and a
+React client. A seeded user can sign in with a username, stay signed in after a
+refresh, and sign out. The existing article list and three-page preview limit
+remain available.
+
+This is a teaching example of sessions, not production authentication: a
+username alone does not verify a person's identity.
+
+## Run the completed app
+
+Install the Python and client dependencies and initialize the database with the
+commands under **Set Up**. Then start `python app.py` from `server/` and
+`npm start --prefix client` from the repository root. Open
+`http://localhost:4000` and sign in with a username created by `seed.py`.
+
+The API provides `POST /login`, `DELETE /logout`, and `GET /check_session`.
+Unknown usernames receive `401`; a session lookup without a valid user also
+receives `401`. Run the backend checks with `pytest` from the repository root.
+
 ## Scenario
 
 In this lab, we'll continue working on the blog site from the last lab and set

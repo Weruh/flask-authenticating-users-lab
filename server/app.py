@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, make_response, jsonify, request, session
+from flask import Flask, request, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
@@ -20,12 +20,46 @@ api = Api(app)
 
 class ClearSession(Resource):
 
-    def delete(self):
-    
-        session['page_views'] = None
-        session['user_id'] = None
+    def get(self):
+        session.pop('page_views', None)
+        session.pop('user_id', None)
 
         return {}, 204
+
+    delete = get
+
+class Login(Resource):
+
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        username = data.get('username')
+        user = User.query.filter_by(username=username).first() if username else None
+
+        if user is None:
+            return {'error': 'Invalid username'}, 401
+
+        # Flask stores this identifier in its signed session cookie.
+        session['user_id'] = user.id
+        return UserSchema().dump(user), 200
+
+class Logout(Resource):
+
+    def delete(self):
+        session.pop('user_id', None)
+        return '', 204
+
+class CheckSession(Resource):
+
+    def get(self):
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id) if user_id is not None else None
+
+        if user is None:
+            # Discard an identifier whose user has since been deleted.
+            session.pop('user_id', None)
+            return {}, 401
+
+        return UserSchema().dump(user), 200
 
 class IndexArticle(Resource):
     
@@ -42,13 +76,18 @@ class ShowArticle(Resource):
         if session['page_views'] <= 3:
 
             article = Article.query.filter(Article.id == id).first()
-            article_json = ArticlesSchema.dump(article)
+            if article is None:
+                return {'error': 'Article not found'}, 404
+            article_json = ArticlesSchema().dump(article)
 
-            return make_response(article_json, 200)
+            return article_json, 200
 
-        return {'message': 'Maximum pageview limit reached'}, 401
+        return {'error': 'Maximum pageview limit reached'}, 401
 
 api.add_resource(ClearSession, '/clear')
+api.add_resource(Login, '/login')
+api.add_resource(Logout, '/logout')
+api.add_resource(CheckSession, '/check_session')
 api.add_resource(IndexArticle, '/articles')
 api.add_resource(ShowArticle, '/articles/<int:id>')
 
